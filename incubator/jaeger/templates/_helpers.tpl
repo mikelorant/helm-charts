@@ -26,3 +26,19 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- define "cassandra.fullname" -}}
 {{- printf "%s-%s" .Release.Name "cassandra" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "elasticsearch.client.url" -}}
+{{- $scheme := .Values.storage.elasticsearch.scheme -}}
+{{- $port := .Values.storage.elasticsearch.port -}}
+{{- if .Values.provisionDataStore.elasticsearch }}
+{{- $host := printf "%s-%s-%s" .Release.Name "elasticsearch" "client" | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s://%s:%s" $scheme $host $port }}
+{{- else }}
+{{- $host := .Values.storage.elasticsearch.host -}}
+{{- printf "%s://%s:%s" $scheme $host $port }}
+{{- end }}
+{{- end -}}
