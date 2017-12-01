@@ -2,28 +2,28 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: "{{ template "jaeger.fullname" . }}-query"
+  name: {{ template "jaeger.fullname" . }}-query
   labels:
-    app: "{{ template "jaeger.name" . }}"
+    app: {{ template "jaeger.name" . }}
     jaeger-infra: query-deployment
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    component: "query"
-    heritage: "{{ .Release.Service }}"
-    release: "{{ .Release.Name }}"
+    component: query
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
 {{- if .Values.query.annotations }}
   annotations:
-{{ toYaml .Values.query.annotations | indent 6 }}
+{{ toYaml .Values.query.annotations | indent 4 }}
 {{- end }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.query.replicaCount }}
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: "{{ template "jaeger.name" . }}"
-        component: "query"
-        release: "{{ .Release.Name }}"
+        app: {{ template "jaeger.name" . }}
+        component: query
+        release: {{ .Release.Name }}
         jaeger-infra: query-pod
 {{- if .Values.query.podLabels }}
 {{ toYaml .Values.query.podLabels | indent 8 }}
@@ -32,33 +32,42 @@ spec:
       nodeSelector:
 {{ toYaml .Values.query.nodeSelector | indent 8 }}
       containers:
-      - name: "{{ template "jaeger.fullname" . }}-query"
-        image: "{{ .Values.query.image }}:{{ .Values.query.tag }}"
+      - name: {{ template "jaeger.fullname" . }}-query
+        image: {{ .Values.query.image }}:{{ .Values.query.tag }}
         imagePullPolicy: {{ .Values.query.pullPolicy }}
         env:
           - name: SPAN_STORAGE_TYPE
-            value: {{ .Values.storage.type }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ template "jaeger.fullname" . }}
+                key: span-storage.type
           {{- if eq .Values.storage.type "cassandra" }}
           - name: CASSANDRA_SERVERS
-            value: {{ template "cassandra.fullname" . }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ template "jaeger.fullname" . }}
+                key: cassandra.servers
           - name: CASSANDRA_KEYSPACE
-            value: jaeger_v1_{{ .Values.cassandra.config.dc_name }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ template "jaeger.fullname" . }}
+                key: cassandra.keyspace
           {{- end }}
           {{- if eq .Values.storage.type "elasticsearch" }}
           - name: ES_SERVER_URLS
-            value: {{ template "elasticsearch.client.url" . }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ template "jaeger.fullname" . }}
+                key: es.server-urls
           {{- end }}
         ports:
         - containerPort: {{ .Values.query.service.targetPort }}
           protocol: TCP
         resources:
 {{ toYaml .Values.query.resources | indent 10 }}
-{{- range $key, $value := .Values.query.cmdlineParams }}
-        - "{{ $value }}"
-{{- end }}
         readinessProbe:
           httpGet:
-            path: "/"
+            path: /
             port: {{ .Values.query.service.targetPort }}
       dnsPolicy: {{ .Values.query.dnsPolicy }}
       restartPolicy: Always

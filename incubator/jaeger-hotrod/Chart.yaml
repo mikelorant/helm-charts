@@ -1,4 +1,0 @@
-apiVersion: v1
-description: A Helm chart for Jaeger Hotrod
-name: jaeger-hotrod
-version: 0.1.0
